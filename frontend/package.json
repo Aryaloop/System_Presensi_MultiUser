@@ -20,8 +20,10 @@
     "emailjs": "^4.0.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-google-recaptcha": "^3.1.0",
     "react-router-dom": "^7.9.4",
     "uuid": "^13.0.0"
   },
