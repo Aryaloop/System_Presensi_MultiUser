@@ -12,7 +12,10 @@ import checkVerifyRoute from "./check-verification.js";
 import { sendEmail } from "./emailService.js";
 import { SuperAdminController } from "./superAdmin.js";
 import { CreateAdminController } from "./createAdmin.js";
+<<<<<<< HEAD
 import userRoute from "./user.js";
+=======
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
 dotenv.config();
 
 const app = express();
@@ -277,10 +280,13 @@ app.put("/api/superadmin/perusahaan/:id", SuperAdminController.updatePerusahaan)
 app.delete("/api/superadmin/perusahaan/:id", SuperAdminController.deletePerusahaan);
 app.post("/api/superadmin/create-admin", CreateAdminController.createAdmin);
 
+<<<<<<< HEAD
 
 // Routing User
 app.use("/api/user", userRoute);
 
+=======
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
 // ======================================================
 // 🌐 START SERVER
 // ======================================================

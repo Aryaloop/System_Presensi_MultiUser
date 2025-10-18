@@ -11,7 +11,10 @@ import DashboardAdmin from "./pages/DashboardAdmin";
 import DashboardUser from "./pages/DashboardUser";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
+<<<<<<< HEAD
 import './index.css';
+=======
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
 
 function App() {
   return (
@@ -26,7 +29,11 @@ function App() {
 
           {/* Protected Routes */}
           <Route path="/verify/:token" element={<Verify />} />
+<<<<<<< HEAD
 
+=======
+       
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/dashboard_super_admin" element={<DashboardSuperAdmin />} />
           <Route path="/dashboard_admin" element={<DashboardAdmin />} />

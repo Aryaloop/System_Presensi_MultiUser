@@ -43,7 +43,11 @@ export default function Login() {
       console.error("Error dari server:", err.response?.data);
       setError(
         err.response?.data?.message ||
+<<<<<<< HEAD
         "Login gagal atau backend belum berjalan"
+=======
+          "Login gagal atau backend belum berjalan"
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
       );
     } finally {
       setLoading(false);
