@@ -46,7 +46,11 @@ export default function Register() {
     }
   };
 
+<<<<<<< HEAD
+  // ✅ tampilkan halaman sukses 
+=======
   // ✅ tampilkan halaman sukses mirip Verify.jsx
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
   if (success) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-500 to-blue-600">

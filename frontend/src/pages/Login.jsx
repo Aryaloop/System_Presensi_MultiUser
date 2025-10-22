@@ -26,6 +26,11 @@ export default function Login() {
     try {
       const res = await axios.post("/api/login", form);
       const { role, id_jabatan } = res.data;
+      // ✅ Simpan data user ke localStorage
+      localStorage.setItem("id_akun", res.data.id_akun);
+      localStorage.setItem("username", res.data.username);
+      localStorage.setItem("role", res.data.role);
+
 
       if (id_jabatan === "SPRADM" || role === "SUPERADMIN") {
         navigate("/dashboard_super_admin");
@@ -38,7 +43,11 @@ export default function Login() {
       console.error("Error dari server:", err.response?.data);
       setError(
         err.response?.data?.message ||
+<<<<<<< HEAD
+        "Login gagal atau backend belum berjalan"
+=======
           "Login gagal atau backend belum berjalan"
+>>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
       );
     } finally {
       setLoading(false);

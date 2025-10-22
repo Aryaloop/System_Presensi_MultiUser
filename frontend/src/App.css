@@ -40,3 +40,39 @@
 .read-the-docs {
   color: #888;
 }
+.react-calendar__tile {
+  position: relative;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.react-calendar__tile:hover {
+  filter: brightness(1.1);
+}
+/* === Override bawaan React Calendar agar warna Tailwind muncul === */
+.react-calendar__tile {
+  position: relative;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+.react-calendar__tile abbr {
+  position: relative;
+  z-index: 10;
+}
+
+/* biar class Tailwind bg-* nggak ketiban background putih */
+.react-calendar__tile[class*="bg-"] {
+  background-color: var(--tw-bg-opacity) !important;
+}
+
+/* efek hover supaya tetap enak dilihat */
+.react-calendar__tile:hover {
+  filter: brightness(0.95);
+  transition: all 0.2s ease-in-out;
+}
+
+/* border radius biar bulat penuh */
+.react-calendar__tile {
+  border-radius: 9999px !important;
+}
+  
