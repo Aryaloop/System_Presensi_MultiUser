@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendEmail } from "./emailService.js";
-
-dotenv.config();
+import path from "path";
+dotenv.config({ path: path.resolve("../.env") });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export class CreateAdminController {

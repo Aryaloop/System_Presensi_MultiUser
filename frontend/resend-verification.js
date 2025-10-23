@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 import { sendEmail } from "./emailService.js";
-
-dotenv.config();
+import path from "path";
+dotenv.config({ path: path.resolve("../.env") });
 const router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
@@ -46,7 +46,7 @@ router.post("/", async (req, res) => {
             .eq("id_akun", akun.id_akun);
 
         // 📧 Kirim ulang email verifikasi
-        const verifyLink = `http://localhost:3000/verify/${newToken}`;
+        const verifyLink = `${process.env.FRONTEND_URL}/verify/${newToken}`;
         await sendEmail(
             email,
             "Kirim Ulang Verifikasi Akun KitaPresensi",

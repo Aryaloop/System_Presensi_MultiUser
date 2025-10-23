@@ -1,0 +1,1 @@
+INSERT INTO "public"."shift" ("id_shift", "nama_shift", "jam_masuk", "jam_pulang", "id_perusahaan", "hari_shift") VALUES ('SHIFT1', 'Shift Pagi', '08:00:00', '17:00:00', 'PER001', 'Senin-Jumat'), ('SHIFT2', 'Shift Siang', '13:00:00', '22:00:00', 'PER001', 'Senin-Jumat'), ('SHIFT3', 'Shift Malam', '22:00:00', '06:00:00', 'PER001', 'Sabtu-Minggu');
