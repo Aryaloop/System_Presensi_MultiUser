@@ -12,11 +12,11 @@ import checkVerifyRoute from "./check-verification.js";
 import { sendEmail } from "./emailService.js";
 import { SuperAdminController } from "./superAdmin.js";
 import { CreateAdminController } from "./createAdmin.js";
-<<<<<<< HEAD
+import path from "path";
 import userRoute from "./user.js";
-=======
->>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
-dotenv.config();
+import adminRoutes from "./admin.js";
+
+dotenv.config({ path: path.resolve("../.env") });
 
 const app = express();
 app.use(cors());
@@ -98,18 +98,18 @@ class AuthController {
       const { email, password, captcha } = req.body;
 
       // === ✅ Verifikasi reCAPTCHA dulu ===
-      if (!captcha) {
-        return res.status(400).json({ message: "Captcha diperlukan" });
-      }
+      // if (!captcha) {
+      //   return res.status(400).json({ message: "Captcha diperlukan" });
+      // }
 
-      const secret = process.env.RECAPTCHA_SECRET;
-      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`;
-      const response = await fetch(verifyUrl, { method: "POST" });
-      const data = await response.json();
+      // const secret = process.env.RECAPTCHA_SECRET;
+      // const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`;
+      // const response = await fetch(verifyUrl, { method: "POST" });
+      // const data = await response.json();
 
-      if (!data.success) {
-        return res.status(403).json({ message: "Verifikasi captcha gagal." });
-      }
+      // if (!data.success) {
+      //   return res.status(403).json({ message: "Verifikasi captcha gagal." });
+      // }
 
       // === Lanjut ke proses login normal ===
       const { data: akun, error } = await db.findAkunByEmail(email);
@@ -142,6 +142,7 @@ class AuthController {
         id_akun: akun.id_akun,
         id_jabatan: akun.id_jabatan,
         username: akun.username,
+        id_perusahaan: akun.id_perusahaan, // 🟢 tambahkan ini
         role:
           akun.id_jabatan === "SPRADM"
             ? "SUPERADMIN"
@@ -224,7 +225,7 @@ app.post("/api/forgot-password", async (req, res) => {
 
     console.log("✅ Token reset disimpan:", resetToken);
 
-    const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
     await sendEmail(
       email,
       "🔐 Reset Password Akun KitaPresensi",
@@ -280,13 +281,15 @@ app.put("/api/superadmin/perusahaan/:id", SuperAdminController.updatePerusahaan)
 app.delete("/api/superadmin/perusahaan/:id", SuperAdminController.deletePerusahaan);
 app.post("/api/superadmin/create-admin", CreateAdminController.createAdmin);
 
-<<<<<<< HEAD
+
 
 // Routing User
 app.use("/api/user", userRoute);
 
-=======
->>>>>>> 0cbebf4d0797bd5bddd09d4ef1c2a7d9014ff141
+// Admin Routing
+app.use("/", adminRoutes);
+
+
 // ======================================================
 // 🌐 START SERVER
 // ======================================================

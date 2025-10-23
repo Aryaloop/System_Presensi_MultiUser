@@ -5,9 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import path from "path";
 import { sendEmail } from "./emailService.js";
 
-dotenv.config();
+dotenv.config({ path: path.resolve("../.env") });
 const router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
@@ -50,7 +51,7 @@ router.post("/", async (req, res) => {
     if (insertError) throw insertError;
 
     // 📧 Kirim email verifikasi
-    const verifyLink = `http://localhost:3000/verify/${tokenVerifikasi}`;
+    const verifyLink = `${process.env.FRONTEND_URL}/verify/${tokenVerifikasi}`;
     const htmlContent = `
       <div style="font-family:sans-serif;padding:20px;text-align:center;">
         <h2 style="color:#4f46e5;">Verifikasi Akun KitaPresensi</h2>
@@ -90,5 +91,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: "Terjadi kesalahan server" });
   }
 });
+
 
 export default router;

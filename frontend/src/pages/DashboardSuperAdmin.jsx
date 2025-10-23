@@ -1,80 +1,104 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Swal from "sweetalert2";
+
+// 🔹 Komponen kecil tambahan agar rapi
+function StatBox({ title, value, color }) {
+  const colorClass = {
+    indigo: "text-indigo-600",
+    green: "text-green-600",
+    blue: "text-blue-600",
+  }[color] || "text-gray-600";
+
+  return (
+    <div className="bg-white p-6 shadow rounded-lg">
+      <p className="text-gray-500">{title}</p>
+      <p className={`text-3xl font-bold ${colorClass}`}>{value}</p>
+    </div>
+  );
+}
 
 export default function DashboardSuperAdmin() {
-  const [showFormAdmin, setShowFormAdmin] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // 🧩 State umum
   const [page, setPage] = useState("home");
-  const [perusahaan, setPerusahaan] = useState([]);
-  const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({ nama_perusahaan: "", alamat: "" });
+  const [showFormAdmin, setShowFormAdmin] = useState(false);
   const [formAdmin, setFormAdmin] = useState({
     username: "",
     email: "",
     id_perusahaan: "",
   });
   const [isSaving, setIsSaving] = useState(false);
-  // Fetch data dari backend
-  useEffect(() => {
-    if (page === "perusahaan") fetchPerusahaan();
-    if (page === "admin") fetchAdmins();
-  }, [page]);
 
-  const fetchPerusahaan = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get("/api/superadmin/perusahaan");
-      setPerusahaan(res.data);
-    } catch {
-      alert("Gagal memuat data perusahaan");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ✅ React Query ambil data
+  const {
+    data: perusahaan = [],
+    isLoading: loadingPerusahaan,
+    isError: errorPerusahaan,
+  } = useQuery({
+    queryKey: ["perusahaan"],
+    queryFn: async () => (await axios.get("/api/superadmin/perusahaan")).data,
+    onError: (err) => {
+      console.error("❌ Gagal ambil perusahaan:", err);
+      Swal.fire("Error", "Gagal memuat data perusahaan.", "error");
+    },
+  });
 
-  const fetchAdmins = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get("/api/superadmin/admins");
-      setAdmins(res.data);
-    } catch {
-      alert("Gagal memuat data admin");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: admins = [],
+    isLoading: loadingAdmins,
+    isError: errorAdmins,
+  } = useQuery({
+    queryKey: ["admins"],
+    queryFn: async () => (await axios.get("/api/superadmin/admins")).data,
+    onError: (err) => {
+      console.error("❌ Gagal ambil admin:", err);
+      Swal.fire("Error", "Gagal memuat data admin.", "error");
+    },
+  });
 
-  const handleSuspend = async (id, status) => {
-    try {
-      await axios.put(`/api/superadmin/suspend/${id}`, { status });
-      fetchPerusahaan();
-    } catch {
-      alert("Gagal mengubah status perusahaan");
-    }
-  };
-
+  // 🧩 Logout
   const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
+    Swal.fire({
+      title: "Keluar dari sistem?",
+      text: "Anda akan kembali ke halaman login.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Ya, logout",
+      cancelButtonText: "Batal",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        navigate("/login");
+        Swal.fire({
+          icon: "success",
+          title: "Logout berhasil!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
+    });
   };
-  // ----------------------------
-  // 💡 CRUD FUNCTION SECTION
-  // ----------------------------
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+
+  // 🧩 Form perusahaan
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleAddPerusahaan = async (e) => {
     e.preventDefault();
     try {
       await axios.post("/api/superadmin/perusahaan", form);
-      fetchPerusahaan(); // refresh data
       setShowForm(false);
-    } catch (err) {
-      alert("Gagal menambah perusahaan");
+      queryClient.invalidateQueries(["perusahaan"]);
+      Swal.fire("Berhasil", "Perusahaan berhasil ditambahkan.", "success");
+    } catch {
+      Swal.fire("Gagal", "Tidak dapat menambahkan perusahaan.", "error");
     }
   };
 
@@ -88,54 +112,118 @@ export default function DashboardSuperAdmin() {
     e.preventDefault();
     try {
       await axios.put(`/api/superadmin/perusahaan/${form.id_perusahaan}`, form);
-      fetchPerusahaan();
       setShowForm(false);
       setEditMode(false);
-    } catch (err) {
-      alert("Gagal mengedit perusahaan");
+      queryClient.invalidateQueries(["perusahaan"]);
+      Swal.fire("Berhasil", "Perusahaan diperbarui.", "success");
+    } catch {
+      Swal.fire("Gagal", "Tidak dapat memperbarui perusahaan.", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Yakin ingin menghapus?")) return;
-    try {
-      await axios.delete(`/api/superadmin/perusahaan/${id}`);
-      fetchPerusahaan();
-    } catch {
-      alert("Gagal menghapus perusahaan");
+    const result = await Swal.fire({
+      title: "Yakin ingin menghapus?",
+      text: "Data perusahaan akan dihapus permanen.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, hapus!",
+      cancelButtonText: "Batal",
+    });
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`/api/superadmin/perusahaan/${id}`);
+        queryClient.invalidateQueries(["perusahaan"]);
+        Swal.fire("Terhapus!", "Perusahaan telah dihapus.", "success");
+      } catch {
+        Swal.fire("Gagal", "Tidak dapat menghapus perusahaan.", "error");
+      }
     }
   };
+
+  const handleSuspend = async (id, status) => {
+    try {
+      await axios.put(`/api/superadmin/suspend/${id}`, { status });
+      queryClient.invalidateQueries(["perusahaan"]);
+      Swal.fire(
+        "Berhasil",
+        status ? "Perusahaan diaktifkan!" : "Perusahaan disuspend!",
+        "success"
+      );
+    } catch {
+      Swal.fire("Gagal", "Tidak dapat mengubah status perusahaan.", "error");
+    }
+  };
+
+  // 🧩 Form Admin
   const handleChangeAdmin = (e) =>
     setFormAdmin({ ...formAdmin, [e.target.name]: e.target.value });
 
+  const handleEditAdmin = (admin) => {
+    setFormAdmin(admin);
+    setShowFormAdmin(true);
+  };
+
   const handleAddAdmin = async (e) => {
     e.preventDefault();
-    setIsSaving(true); // aktifkan loading
     try {
+      setIsSaving(true);
       const res = await axios.post("/api/superadmin/create-admin", formAdmin);
-      alert(res.data.message || "Admin berhasil dibuat");
+      Swal.fire("Berhasil", res.data.message || "Admin berhasil ditambahkan.", "success");
+      queryClient.invalidateQueries(["admins"]);
+      setShowFormAdmin(false);
+    } catch (err) {
+      Swal.fire("Gagal", err.response?.data?.message || "Gagal menambah admin.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveEditAdmin = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await axios.put(`/api/superadmin/admins/${formAdmin.id_akun}`, formAdmin);
+      Swal.fire("Berhasil", "Admin diperbarui.", "success");
       setShowFormAdmin(false);
       setFormAdmin({ username: "", email: "", id_perusahaan: "" });
-      await fetchAdmins(); // refresh data admin
+      queryClient.invalidateQueries(["admins"]);
     } catch (err) {
-      console.error("Gagal menambah admin:", err);
-      alert(err.response?.data?.message || "Gagal menambah admin");
+      Swal.fire("Gagal", err.response?.data?.message || "Gagal memperbarui admin.", "error");
     } finally {
-      setIsSaving(false); // matikan loading
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (id_akun) => {
+    const result = await Swal.fire({
+      title: "Yakin ingin menghapus admin ini?",
+      text: "Data admin akan dihapus permanen.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, hapus!",
+      cancelButtonText: "Batal",
+    });
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`/api/superadmin/admins/${id_akun}`);
+        queryClient.invalidateQueries(["admins"]);
+        Swal.fire("Berhasil", "Admin dihapus!", "success");
+      } catch {
+        Swal.fire("Gagal", "Tidak dapat menghapus admin.", "error");
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* HEADER */}
-      <header className="bg-indigo-700 text-white shadow p-4 flex justify-between items-center">
+      <header className="bg-indigo-700 text-white p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Dashboard Super Admin</h1>
         <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded">
           Logout
         </button>
       </header>
 
-      {/* NAVIGATION */}
       <nav className="bg-white shadow p-4 flex gap-4">
         {["home", "perusahaan", "admin"].map((item) => (
           <button
@@ -149,45 +237,25 @@ export default function DashboardSuperAdmin() {
         ))}
       </nav>
 
-      {/* MAIN CONTENT */}
       <main className="p-6">
-        {/* =======================
-            HALAMAN UTAMA
-        ======================= */}
         {page === "home" && (
           <section>
             <h2 className="text-xl font-bold mb-4">Ringkasan Sistem</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-6 shadow rounded-lg">
-                <p className="text-gray-500">Total Perusahaan</p>
-                <p className="text-3xl font-bold text-indigo-600">
-                  {perusahaan.length}
-                </p>
-              </div>
-              <div className="bg-white p-6 shadow rounded-lg">
-                <p className="text-gray-500">Total Admin</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {admins.length}
-                </p>
-              </div>
-              <div className="bg-white p-6 shadow rounded-lg">
-                <p className="text-gray-500">Akses Aktif</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {
-                    perusahaan.filter((p) => p.status_aktif === true).length
-                  }
-                </p>
-              </div>
+              <StatBox title="Total Perusahaan" value={(perusahaan || []).length} color="indigo" />
+              <StatBox title="Total Admin" value={(admins || []).length} color="green" />
+              <StatBox
+                title="Akses Aktif"
+                value={(perusahaan || []).filter((p) => p.status_aktif).length}
+                color="blue"
+              />
             </div>
           </section>
         )}
 
-        {/* =======================
-            MANAJEMEN PERUSAHAAN
-        ======================= */}
+        {/* === Perusahaan === */}
         {page === "perusahaan" && (
           <section>
-            {/* Bagian Header dan Tombol Tambah */}
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">Data Perusahaan</h2>
               <button
@@ -202,35 +270,31 @@ export default function DashboardSuperAdmin() {
               </button>
             </div>
 
-            {/* 🔹 Modal Form Tambah/Edit */}
             {showForm && (
-              <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+              <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
                 <div className="bg-white p-6 rounded-lg w-96 shadow-lg">
                   <h3 className="font-bold mb-3">
                     {editMode ? "Edit Perusahaan" : "Tambah Perusahaan"}
                   </h3>
                   <form
-                    onSubmit={
-                      editMode ? handleUpdatePerusahaan : handleAddPerusahaan
-                    }
+                    onSubmit={editMode ? handleUpdatePerusahaan : handleAddPerusahaan}
                     className="space-y-3"
                   >
                     <input
                       name="nama_perusahaan"
-                      placeholder="Nama Perusahaan"
                       value={form.nama_perusahaan}
                       onChange={handleChange}
+                      placeholder="Nama Perusahaan"
                       className="w-full border p-2 rounded"
                       required
                     />
                     <input
                       name="alamat"
-                      placeholder="Alamat"
                       value={form.alamat}
                       onChange={handleChange}
+                      placeholder="Alamat"
                       className="w-full border p-2 rounded"
                     />
-
                     <div className="flex justify-end gap-2 mt-4">
                       <button
                         type="button"
@@ -239,10 +303,7 @@ export default function DashboardSuperAdmin() {
                       >
                         Batal
                       </button>
-                      <button
-                        type="submit"
-                        className="px-3 py-1 bg-indigo-600 text-white rounded"
-                      >
+                      <button type="submit" className="px-3 py-1 bg-indigo-600 text-white rounded">
                         {editMode ? "Update" : "Simpan"}
                       </button>
                     </div>
@@ -251,9 +312,8 @@ export default function DashboardSuperAdmin() {
               </div>
             )}
 
-            {/* 🔹 Tabel Data Perusahaan  */}
-            {loading ? (
-              <p>Memuat data...</p>
+            {loadingPerusahaan ? (
+              <p>Memuat data perusahaan...</p>
             ) : (
               <table className="min-w-full bg-white border">
                 <thead className="bg-gray-100">
@@ -266,7 +326,8 @@ export default function DashboardSuperAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {perusahaan.filter(p => p.id_perusahaan !== "PRE010") // sembunyikan perusahaan inti
+                  {(perusahaan || [])
+                    .filter((p) => p.id_perusahaan !== "PRE010")
                     .map((p) => (
                       <tr key={p.id_perusahaan}>
                         <td className="border p-2">{p.id_perusahaan}</td>
@@ -276,30 +337,23 @@ export default function DashboardSuperAdmin() {
                           {p.status_aktif ? "Aktif" : "Nonaktif"}
                         </td>
                         <td className="border p-2 space-x-2">
-                          {/* Tombol Edit */}
                           <button
                             onClick={() => handleEdit(p)}
                             className="bg-yellow-500 text-white px-3 py-1 rounded"
                           >
                             Edit
                           </button>
-
-                          {/* Tombol Hapus */}
                           <button
                             onClick={() => handleDelete(p.id_perusahaan)}
                             className="bg-gray-500 text-white px-3 py-1 rounded"
                           >
                             Hapus
                           </button>
-
-                          {/* Tombol Suspend Tetap */}
                           <button
-                            onClick={() =>
-                              handleSuspend(p.id_perusahaan, !p.status_aktif)
-                            }
+                            onClick={() => handleSuspend(p.id_perusahaan, !p.status_aktif)}
                             className={`px-3 py-1 rounded ${p.status_aktif
-                              ? "bg-red-500 text-white"
-                              : "bg-green-500 text-white"
+                                ? "bg-red-500 text-white"
+                                : "bg-green-500 text-white"
                               }`}
                           >
                             {p.status_aktif ? "Suspend" : "Aktifkan"}
@@ -313,10 +367,7 @@ export default function DashboardSuperAdmin() {
           </section>
         )}
 
-
-        {/* =======================
-            MANAJEMEN ADMIN
-        ======================= */}
+        {/* === Admin === */}
         {page === "admin" && (
           <section>
             <div className="flex justify-between mb-4">
@@ -329,60 +380,65 @@ export default function DashboardSuperAdmin() {
               </button>
             </div>
 
-            {/* Modal Form Tambah Admin */}
             {showFormAdmin && (
-              <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+              <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
                 <div className="bg-white p-6 rounded-lg w-96 shadow-lg">
-                  <h3 className="font-bold mb-3">Tambah Admin</h3>
+                  <h3 className="font-bold mb-3">
+                    {formAdmin.id_akun ? "Edit Admin" : "Tambah Admin"}
+                  </h3>
                   <form
-                    onSubmit={handleAddAdmin}
+                    onSubmit={formAdmin.id_akun ? handleSaveEditAdmin : handleAddAdmin}
                     className="space-y-3"
                   >
                     <input
                       name="username"
-                      placeholder="Nama Admin"
                       value={formAdmin.username}
                       onChange={handleChangeAdmin}
+                      placeholder="Nama Admin"
                       className="w-full border p-2 rounded"
                       required
                     />
                     <input
                       type="email"
                       name="email"
-                      placeholder="Email Admin"
                       value={formAdmin.email}
                       onChange={handleChangeAdmin}
+                      placeholder="Email Admin"
                       className="w-full border p-2 rounded"
                       required
                     />
                     <input
                       name="id_perusahaan"
-                      placeholder="ID Perusahaan (contoh: PER001)"
                       value={formAdmin.id_perusahaan}
                       onChange={handleChangeAdmin}
+                      placeholder="ID Perusahaan"
                       className="w-full border p-2 rounded"
                       required
                     />
-
                     <div className="flex justify-end gap-2 mt-4">
                       <button
                         type="button"
-                        onClick={() => setShowFormAdmin(false)}
-                        disabled={isSaving} // tombol batal juga bisa ikut nonaktif
-                        className={`px-3 py-1 rounded ${isSaving ? "bg-gray-300 cursor-not-allowed" : "bg-gray-300"
-                          }`}
+                        onClick={() => {
+                          setShowFormAdmin(false);
+                          setFormAdmin({
+                            username: "",
+                            email: "",
+                            id_perusahaan: "",
+                          });
+                        }}
+                        className="px-3 py-1 bg-gray-300 rounded"
                       >
                         Batal
                       </button>
                       <button
                         type="submit"
-                        disabled={isSaving} // 🔒 Nonaktif saat loading
-                        className={`px-3 py-1 rounded text-white ${isSaving
-                          ? "bg-indigo-300 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-700"
+                        disabled={isSaving}
+                        className={`px-3 py-1 text-white rounded ${isSaving
+                            ? "bg-indigo-300 cursor-not-allowed"
+                            : "bg-indigo-600 hover:bg-indigo-700"
                           }`}
                       >
-                        {isSaving ? "Menyimpan..." : "Simpan"} {/* 🔄 Teks berubah */}
+                        {isSaving ? "Menyimpan..." : "Simpan"}
                       </button>
                     </div>
                   </form>
@@ -390,9 +446,8 @@ export default function DashboardSuperAdmin() {
               </div>
             )}
 
-
-            {loading ? (
-              <p>Memuat data...</p>
+            {loadingAdmins ? (
+              <p>Memuat data admin...</p>
             ) : (
               <table className="min-w-full bg-white border">
                 <thead className="bg-gray-100">
@@ -400,14 +455,29 @@ export default function DashboardSuperAdmin() {
                     <th className="p-2 border">Nama</th>
                     <th className="p-2 border">Email</th>
                     <th className="p-2 border">Perusahaan</th>
+                    <th className="p-2 border">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {admins.map((a) => (
+                  {(admins || []).map((a) => (
                     <tr key={a.id_akun}>
                       <td className="border p-2">{a.username}</td>
                       <td className="border p-2">{a.email}</td>
                       <td className="border p-2">{a.id_perusahaan}</td>
+                      <td className="border p-2 space-x-2">
+                        <button
+                          onClick={() => handleEditAdmin(a)}
+                          className="bg-yellow-500 text-white px-3 py-1 rounded"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAdmin(a.id_akun)}
+                          className="bg-red-500 text-white px-3 py-1 rounded"
+                        >
+                          🗑️ Hapus
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
