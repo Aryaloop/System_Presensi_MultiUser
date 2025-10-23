@@ -1,0 +1,1 @@
+INSERT INTO "public"."jabatan" ("id_jabatan", "nama_jabatan") VALUES ('ADMIN', 'ADMIN'), ('SPRADM', 'SUPERADMIN'), ('USER', 'USER');

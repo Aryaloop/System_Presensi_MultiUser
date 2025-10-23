@@ -164,7 +164,6 @@ export default function DashboardAdmin() {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     try {
-      // Simpan perubahan ke backend
       const res = await axios.put(
         `/api/admin/karyawan/${selectedKaryawan.id_akun}`,
         {
@@ -176,31 +175,17 @@ export default function DashboardAdmin() {
         }
       );
 
-      // setelah berhasil update
-      queryClient.invalidateQueries(["karyawan", id_perusahaan]);
-      setShowEditForm(false);
+      // ✅ Refetch data dari React Query biar sinkron dengan server
+      await queryClient.invalidateQueries(["karyawan", id_perusahaan]);
+
       Swal.fire("✅ Berhasil", "Data karyawan berhasil diperbarui", "success");
-
-      // ✅ Update data lokal (tanpa reload)
-      setKaryawanData((prev) =>
-        prev.map((k) =>
-          k.id_akun === selectedKaryawan.id_akun
-            ? {
-              ...k,
-              ...selectedKaryawan,
-              shift: shiftList.find((s) => s.id_shift === selectedKaryawan.id_shift) || k.shift,
-            }
-            : k
-        )
-      );
-
-      alert("✅ Data karyawan berhasil diperbarui");
       setShowEditForm(false);
     } catch (err) {
       console.error("❌ Gagal update:", err);
-      alert("Gagal memperbarui data karyawan");
+      Swal.fire("❌ Gagal", "Terjadi kesalahan saat memperbarui data", "error");
     }
   };
+
 
 
   const fetchShiftList = async () => {

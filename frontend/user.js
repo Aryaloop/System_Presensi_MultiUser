@@ -231,21 +231,36 @@ router.get("/:id_akun", async (req, res) => {
 });
 
 
-// 4️⃣ Ambil jam shift
-// const { data: shift } = await supabase
-//   .from("shift")
-//   .select("jam_masuk")
-//   .eq("id_shift", akun.id_shift)
-//   .maybeSingle();
+// GET lokasi & shift
+router.get("/lokasi-shift/:id_akun", async (req, res) => {
+  try {
+    const { id_akun } = req.params;
 
-// let status = "HADIR";
-// if (shift) {
-//   const now = new Date();
-//   const [h, m] = shift.jam_masuk.split(":");
-//   const jamShift = new Date(now);
-//   jamShift.setHours(h, m, 0);
+    const { data: akun, error: akunError } = await supabase
+      .from("akun")
+      .select("id_perusahaan, id_shift")
+      .eq("id_akun", id_akun)
+      .single();
+    if (akunError) throw akunError;
 
-//   if (now > jamShift) status = "TERLAMBAT";
-// }
+    const { data: perusahaan } = await supabase
+      .from("perusahaan")
+      .select("alamat, latitude, longitude, radius_m")
+      .eq("id_perusahaan", akun.id_perusahaan)
+      .single();
+
+    const { data: shift } = await supabase
+      .from("shift")
+      .select("jam_masuk, jam_pulang")
+      .eq("id_shift", akun.id_shift)
+      .maybeSingle();
+
+    res.json({ success: true, perusahaan, shift });
+  } catch (err) {
+    console.error("❌ Error lokasi-shift:", err);
+    res.status(500).json({ success: false, message: "Gagal memuat data lokasi & shift" });
+  }
+});
+
 
 export default router;

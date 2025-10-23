@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function DashboardUser() {
+  const idAkun = typeof window !== "undefined" ? localStorage.getItem("id_akun") : null;
+
   // Caching 
   const id_akun = localStorage.getItem("id_akun");
   const queryClient = useQueryClient();
@@ -31,6 +33,10 @@ export default function DashboardUser() {
     },
   });
 
+  // ---------- dinamis basic information ----------
+  const [lokasiKantor, setLokasiKantor] = useState(null);
+  const [jamShift, setJamShift] = useState(null);
+  const [statusArea, setStatusArea] = useState("...");
 
   // --------- NAV / LAYOUT ----------
   const [page, setPage] = useState("dashboard"); // dashboard | absen | izin | kalender | data | pengaturan
@@ -54,7 +60,7 @@ export default function DashboardUser() {
   const [alasan, setAlasan] = useState("");
   const [keterangan, setKeterangan] = useState("");
 
-  const idAkun = typeof window !== "undefined" ? localStorage.getItem("id_akun") : null;
+
 
   // SweetAlert helper (toast)
   const toast = Swal.mixin({
@@ -136,19 +142,46 @@ export default function DashboardUser() {
     }
   };
 
+  // 
+  useEffect(() => {
+    if (!idAkun) return;
+    axios.get(`/api/user/${idAkun}`).then(async (res) => {
+      const user = res.data;
+      setUser(user);
+      const lokasi = await axios.get(`/api/user/lokasi-shift/${idAkun}`);
+      setLokasiKantor(lokasi.data.perusahaan);
+      setJamShift(lokasi.data.shift);
+    });
+  }, [idAkun]);
+
+  // Hitung jarak lokasi kantor - lokasi absen
+  useEffect(() => {
+    if (lokasiKantor && coords.lat && coords.long) {
+      const dx = 111_000 * (coords.lat - lokasiKantor.latitude);
+      const dy = 111_000 * (coords.long - lokasiKantor.longitude);
+      const jarak = Math.sqrt(dx * dx + dy * dy);
+      setStatusArea(jarak <= lokasiKantor.radius_m ? "Dalam Area" : "Luar Area");
+    }
+  }, [lokasiKantor, coords]);
 
 
   // ======= KALENDER =======
   const fetchKehadiran = async (bulan, tahun) => {
     try {
-      const res = await axios.get(
-        `/api/user/kehadiran/${idAkun}?bulan=${bulan}&tahun=${tahun}`
-      );
-      if (res.data.success) setKehadiran(res.data.data || []);
+      const res = await axios.get(`/api/user/kehadiran/${idAkun}?bulan=${bulan}&tahun=${tahun}`);
+      if (res.data.success) {
+        setKehadiran(res.data.data || []);
+        const today = new Date();
+        const sudah = (res.data.data || []).some(
+          (d) => new Date(d.created_at).toDateString() === today.toDateString()
+        );
+        setAttendanceStatus(sudah ? "sudah" : "belum");
+      }
     } catch {
       toast.fire({ icon: "error", title: "Gagal memuat kalender" });
     }
   };
+
 
   // ==== INIT ====
   useEffect(() => {
@@ -174,6 +207,19 @@ export default function DashboardUser() {
     })();
   }, [idAkun]);
 
+  useEffect(() => {
+    const savedCoords = localStorage.getItem("coords");
+    if (savedCoords) {
+      setCoords(JSON.parse(savedCoords));
+      setGpsReady(true);
+    } else {
+      handleGetLocation().then((pos) => {
+        localStorage.setItem("coords", JSON.stringify(pos));
+      });
+    }
+  }, []);
+
+
   // Ringkasan
   const totalHadir = kehadiran.filter((k) => k.status === "HADIR").length;
   const totalWFH = kehadiran.filter((k) => k.status === "WFH").length;
@@ -196,7 +242,11 @@ export default function DashboardUser() {
             {attendanceStatus === "sudah" ? "✔" : "✕"}
           </span>
         </div>
-        <p className="text-[11px] text-emerald-600 mt-1">08:00 - 17:00</p>
+        <p className="text-[11px] text-emerald-600 mt-1">
+          {jamShift
+            ? `${jamShift.jam_masuk} - ${jamShift.jam_pulang}`
+            : "Memuat jam..."}
+        </p>
       </div>
 
       <div className="bg-white rounded-xl border p-4">
@@ -244,7 +294,9 @@ export default function DashboardUser() {
             className="h-12 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition"
           >
             Absen Masuk
-            <span className="block text-[11px] font-normal">08:00 WIB</span>
+            <span className="block text-[11px] font-normal">
+              {jamShift?.jam_masuk ? `${jamShift.jam_masuk} WIB` : "Memuat..."}
+            </span>
           </button>
           <button
             onClick={() => handleAttendance("KELUAR")}
@@ -252,14 +304,22 @@ export default function DashboardUser() {
             className="h-12 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
           >
             Absen Keluar
-            <span className="block text-[11px] font-normal">17:00 WIB</span>
+            <span className="block text-[11px] font-normal">
+              {jamShift?.jam_pulang ? `${jamShift.jam_pulang} WIB` : "Memuat..."}
+            </span>
           </button>
         </div>
 
         <div className="mt-4 rounded-lg bg-gray-50 border p-3">
-          <p className="text-xs text-gray-600 font-medium mb-2">Lokasi Kantor</p>
-          <div className="text-[11px] text-gray-500">Jl. Sudirman No. 123, Jakarta Pusat</div>
-          <div className="text-[11px] text-gray-400">Radius 700m · Status: Dalam Area</div>
+          <div className="text-[11px] text-gray-500">
+            {lokasiKantor?.alamat || "Memuat lokasi..."}
+          </div>
+          <div className="text-[11px] text-gray-400">
+            Radius {lokasiKantor?.radius_m || "-"}m · Status: {statusArea}
+          </div>
+          <p className="text-[11px] text-emerald-600 mt-1">
+            {jamShift ? `${jamShift.jam_masuk} - ${jamShift.jam_pulang}` : "Memuat jam..."}
+          </p>
 
           <div className="grid grid-cols-2 gap-3 mt-3">
             <input
