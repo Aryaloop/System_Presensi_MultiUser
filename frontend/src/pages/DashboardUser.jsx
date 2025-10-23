@@ -4,8 +4,34 @@ import axios from "axios";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import Swal from "sweetalert2";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function DashboardUser() {
+  // Caching 
+  const id_akun = localStorage.getItem("id_akun");
+  const queryClient = useQueryClient();
+  const { data: userData, isLoading, isError } = useQuery({
+    queryKey: ["user", id_akun],
+    queryFn: async () => {
+      const res = await axios.get(`/api/user/${id_akun}`); // ✅ langsung /api
+      return res.data;
+    },
+    staleTime: 1000 * 60 * 5, // cache 5 menit
+    keepPreviousData: true,
+    onError: (err) => {
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Memuat",
+        text: err.message,
+        toast: true,
+        timer: 2000,
+        position: "top-end",
+        showConfirmButton: false,
+      });
+    },
+  });
+
+
   // --------- NAV / LAYOUT ----------
   const [page, setPage] = useState("dashboard"); // dashboard | absen | izin | kalender | data | pengaturan
 
@@ -16,7 +42,7 @@ export default function DashboardUser() {
   const [attendanceStatus, setAttendanceStatus] = useState("belum"); // sudah/belum
   const [loading, setLoading] = useState(false);
   const [coords, setCoords] = useState({ lat: "", long: "" });
-  const id_akun = localStorage.getItem("id_akun");
+
   const [gpsReady, setGpsReady] = useState(false);
   // --------- KALENDER KEHADIRAN ----------
   const [kehadiran, setKehadiran] = useState([]);
